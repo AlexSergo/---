@@ -155,15 +155,20 @@ class MainActivity : AppCompatActivity(), ServiceCallback {
 
     override fun send(senderId: String, destId: String, data: String) {
         val message = createRadioGranitMessage(senderId, destId, data)
-        if (mService != null) mService!!.sendWithWave(message)
+        if (mService != null) {
+            Toast.makeText(this, "Готов к отправке!", Toast.LENGTH_SHORT).show()
+            mService!!.sendWithWave(message)
+        }
     }
 
     override fun setTechnicDelivered(technicName: String) {
-        Toast.makeText(this, "Получил технику $technicName", Toast.LENGTH_SHORT).show()
+        updateMessageGranit()
+            // Toast.makeText(this, "Получил подтв технику $technicName", Toast.LENGTH_SHORT).show()
     }
 
     override fun setGapDelivered(x: Double, y: Double) {
-        Toast.makeText(this, "Получил разрыв lat: " + x + "lon: " + y, Toast.LENGTH_SHORT).show()
+        updateMessageGranit()
+       // Toast.makeText(this, "Получил разрыв lat: " + x + "lon: " + y, Toast.LENGTH_SHORT).show()
     }
 
     override fun updateMessageGranit() {

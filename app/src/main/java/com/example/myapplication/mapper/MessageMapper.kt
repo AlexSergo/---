@@ -25,12 +25,12 @@ object MessageMapper {
     private fun checkMessageGranit(str: String, senderId: String, destId: String, callback: ServiceCallback) {
             if (str.contains("Данные по цели:")) {
                 val technic = TechnicMapperUI.mapTextToTechnicUI(str)
-
+                callback.showToast("Получил цель " + technic.name)
                 callback.send(
                     destId, senderId, "Принял цель " + technic.name)
             } else if (str.contains("Разрыв")) {
                 val pair = TechnicMapperUI.mapTextRadioToGap(str)
-
+                callback.showToast("Получил разрыв!")
                 val msg = "Принял разрыв x=${pair.first.coordinates.x}:X y=${pair.first.coordinates.y}:Y"
                 callback.send(destId, senderId, msg)
             } else if (str.contains("Принял цель")) {
