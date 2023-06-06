@@ -48,6 +48,7 @@ object MessageMapper {
     }
 
     fun createRadioGranitMessage(senderId: String, destId: String, data: String): ByteArray {
-        return "|+$senderId;$destId;$data\r\n|".toByteArray(charset("ISO-8859-5"))
+       // return "|+$senderId;$destId;$data\r\n|".toByteArray(charset("ISO-8859-5"))
+        return "zxc".toByteArray()
     }
 }

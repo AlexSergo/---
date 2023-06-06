@@ -29,12 +29,13 @@ import androidx.core.app.NotificationCompat;
 
 import com.example.myapplication.MainActivity;
 import com.example.myapplication.R;
-import com.example.myapplication.service.ServiceCallback;
+import com.example.myapplication.Utils;
 import com.felhr.usbserial.UsbSerialDevice;
 import com.felhr.usbserial.UsbSerialInterface;
 
 import java.nio.ByteBuffer;
 import java.nio.charset.Charset;
+import java.util.Arrays;
 
 public class LocalService extends Service {
 
@@ -188,7 +189,8 @@ public class LocalService extends Service {
                     serial.open();
                     serial.setBaudRate(115200);
                     serial.setDataBits(UsbSerialInterface.DATA_BITS_8);
-                    serial.setParity(UsbSerialInterface.PARITY_ODD);
+                    serial.setParity(UsbSerialInterface.STOP_BITS_1);
+                    serial.setParity(UsbSerialInterface.PARITY_NONE);
                     serial.setFlowControl(UsbSerialInterface.FLOW_CONTROL_OFF);
                     serial.read(mCallback);
                     Log.e("USB", "Serial " + serial.toString());
@@ -199,17 +201,124 @@ public class LocalService extends Service {
                             Toast.makeText(context, "Готов к передаче", Toast.LENGTH_SHORT).show();
                         }
                     });
-                } catch (Exception e){
+                } catch (Exception e) {
                     listener.showToast("не удалось подключиться!");
                 }
             }
         }
     }
 
-    public void sendWithWave(byte[] data) {
+    private final Integer START = 0xD0;
+    private final Integer END = 0xD1;
+    private final Integer FROM = 0x0000;
+    private final Integer TO = 0x0000;
+    private final Integer BAT = 0x00;
+    private final Integer RAW_DATA = 0x10;
+
+/*    public static byte[] SetCrc16f(byte[] buff, int count) {
+        byte[] result = new byte[buff.length + 2];
+        System.arraycopy(buff, 0, result, 0, buff.length);
+
+        short crc = (short) 0xffff;
+        for (int i = 0; i < count; i++) {
+            crc = crc_xmodem_update(crc, buff[i]);
+        }
+        result[count] = (byte) (crc >> 8);    // Старший байт
+        result[count + 1] = (byte) (crc & 0xff);  // Младший байт
+
+        return result;
+    }
+
+    public static short crc_xmodem_update(short crc, byte data) {
+        crc = (short) (crc ^ ((short) ((short) data << 8)));
+        for (int i = 0; i < 8; i++) {
+            if ((crc & 0x8000) != 0) {
+                crc = (short) ((crc << 1) ^ 0x1021);
+            } else {
+                crc <<= 1;
+            }
+        }
+        return crc;
+    }*/
+
+    // Добавляет 2 байта CRC к массиву данных
+    public static byte[] addCRCXModem(byte[] data){
+        byte[] result = new byte[data.length + 2];
+        System.arraycopy(data, 0, result, 0, data.length);
+
+        short crc = (short) 0xFFFF;
+        for (byte b : data) {
+            crc = (short) (crc_xmodem_update(crc, b) & 0xFFFF);
+        }
+
+        result[result.length - 2] = (byte) (crc >> 8);
+        result[result.length - 1] = (byte) (crc & 0xFF);
+        //Log.d(TAG, "WaveNetCRC crc = " + BytesUtil.bytesToHexString(result));
+        return result;
+    }
+
+    // Возвращает CRCXModem с начальным значением 0xFFFF
+    public static byte[] getCRCXModem (byte[] data)
+    {
+        byte[] result = new byte[2];
+        result[0] = 0;
+        result[1] = 0;
+
+        short crc = (short) 0xFFFF;
+
+        for (byte b : data) {
+            crc = crc_xmodem_update(crc, b);
+        }
+
+        result[0] = (byte) (crc >> 8);
+        result[1] = (byte) (crc & 0xFF);
+        return result;
+    }
+
+    /** Функция расчета СRCXModem */
+    public static short crc_xmodem_update(short crc, byte data) {
+        crc = (short) ( crc ^ ((short) ((short) data << 8)));
+        for (int i = 0; i < 8; i++) {
+
+            if (( crc & (short) 0x8000) == (short) 0x8000) {
+                crc = (short) (((short) (crc << 1)) ^ 0x1021);
+            } else
+                crc = (short) ( crc << 1);
+        }
+        return crc;
+    }
+
+    // Проверяем СRCXModem пакета данных (CRC - 2 последних байта)
+    public static boolean verifyCRCXModem(byte[] data) {
+        try {
+            int dataLength = data.length;
+            // Получаем массив чистых данных
+            byte[] bytes = new byte[dataLength - 2];
+            System.arraycopy(data, 0, bytes, 0, bytes.length);
+            // Получаем CRC
+            byte[] crc = getCRCXModem(bytes);
+
+            // Сравниваем CRC и возвращаем результат
+            return (data[dataLength - 2] == crc[0] && data[dataLength - 1] == crc[1]);
+        } catch (Exception e) {
+            return false;
+        }
+    }
+
+    public void sendWithWave(byte[] bytes) {
         if (serial != null) {
-            serial.write(data);
-            listener.showToast("Отправлено! " + data.length);
+            byte[] sample = Utils.INSTANCE.getSample();
+            byte[] crc = getCRCXModem(sample);
+            byte[] withCRC = addCRCXModem(sample);
+            byte[] afterStuff = Utils.INSTANCE.stuffBytes(withCRC);
+            byte[] result = Utils.INSTANCE.getResult(START, afterStuff, END);
+
+            Log.d("GRANITTTT", "data " + Arrays.toString(sample));
+            Log.d("GRANITTTT", "crc " + Arrays.toString(crc));
+            Log.d("GRANITTTT", "afterStuff " + Arrays.toString(afterStuff));
+            Log.d("GRANITTTT", "result " + Arrays.toString(result));
+            serial.write(result);
+            listener.showToast("Отправлено! " + result.length);
         }
         else
             listener.showToast("Гранит не подключен!");
@@ -242,7 +351,11 @@ public class LocalService extends Service {
                 new Handler(Looper.getMainLooper()).post(new Runnable() {
                     @Override
                     public void run() {
-
+                        Log.e("GRANITTTT", String.valueOf(data.length));
+                        try {
+                            Toast.makeText(context, Arrays.toString(data), Toast.LENGTH_SHORT).show();
+                        }catch (Exception e){}
+                        Utils.INSTANCE.parseData(data);
                         if (data[0] == start[0] && data[data.length-1] == end[0]) {
                             //пакет размером меньше чем 55 байт
                             // затем очистить буфер
