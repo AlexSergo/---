@@ -232,12 +232,11 @@ public class LocalService extends Service {
                 byte[] afterStuff = Utils.INSTANCE.stuffBytes(withCRC);
                 byte[] result = Utils.INSTANCE.getResult(START, afterStuff, END);
 
-                Log.d("GRANITTTT", "data " + Arrays.toString(sample));
-                Log.d("GRANITTTT", "crc " + Arrays.toString(crc));
-                Log.d("GRANITTTT", "afterStuff " + Arrays.toString(afterStuff));
-                Log.d("GRANITTTT", "result " + Arrays.toString(result));
+                Utils.INSTANCE.zz(afterStuff);
+                System.out.println("result " +  result.length);
+
                 serial.write(result);
-                Thread.sleep(100);
+                Thread.sleep(50);
             }
         }
         else

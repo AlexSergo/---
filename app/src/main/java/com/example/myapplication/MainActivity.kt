@@ -71,6 +71,7 @@ class MainActivity : AppCompatActivity(), ServiceCallback {
                 destId.getText().toString(),
                 message.getText().toString()
             ) else showToast("Пустые поля!")
+            println(message.text.toString())
         })
         sendTechnicButton.setOnClickListener {
             if (destId.getText().toString() != "") send(
@@ -181,7 +182,7 @@ class MainActivity : AppCompatActivity(), ServiceCallback {
 
     override fun receiveGranitMessage(message: GranitMessage) {
         binding.message.setText(message.data.decodeToString())
-        Toast.makeText(applicationContext, "сообщение от абонента с crc ${message.senderCRC}", Toast.LENGTH_SHORT).show()
+        Toast.makeText(applicationContext, "сообщение от абонента с crc ${message.senderCRC.contentToString()}", Toast.LENGTH_SHORT).show()
     }
 
     override fun send(senderId: String, destId: String, data: String) {

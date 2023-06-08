@@ -129,4 +129,8 @@ object Utils {
             TO.toShort().toByte(), TO.toShort().toByte(),
             BAT.toShort().toByte()) + bytes
     }
+
+    fun zz(afterStuff: ByteArray) {
+        println(afterStuff.contentToString())
+    }
 }
