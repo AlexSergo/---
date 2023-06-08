@@ -27,6 +27,8 @@ import android.widget.Toast;
 
 import androidx.core.app.NotificationCompat;
 
+import com.example.myapplication.Device;
+import com.example.myapplication.GranitMessage;
 import com.example.myapplication.MainActivity;
 import com.example.myapplication.ManevrProtocol;
 import com.example.myapplication.R;
@@ -220,9 +222,9 @@ public class LocalService extends Service {
     private final int BUFF_ERROR = 0x22;
 
 
-    public void sendWithWave(byte[] bytes) {
+    public void sendWithWave(byte[] bytes, String senderId, String destId) throws InterruptedException {
         if (serial != null) {
-            List<byte[]> list = ManevrProtocol.INSTANCE.getListData(bytes, "1234", "4321");
+            List<byte[]> list = ManevrProtocol.INSTANCE.getListData(bytes, senderId, destId, context);
             for (int i = 0; i < list.size(); i++) {
                 byte[] sample = Utils.INSTANCE.addIdentificators(RAW_DATA, FROM, TO, BAT, list.get(i));
                 byte[] crc = Utils.INSTANCE.getCRCXModem(sample);
@@ -235,7 +237,7 @@ public class LocalService extends Service {
                 Log.d("GRANITTTT", "afterStuff " + Arrays.toString(afterStuff));
                 Log.d("GRANITTTT", "result " + Arrays.toString(result));
                 serial.write(result);
-                listener.showToast("Отправлено! " + result.length);
+                Thread.sleep(100);
             }
         }
         else
@@ -251,9 +253,9 @@ public class LocalService extends Service {
     }
 
     void receiveMessage(byte[] data){
-        String str = new String(data, Charset.forName("ISO-8859-5"));
+/*        String str = new String(data, Charset.forName("ISO-8859-5"));
         String newStr = (str.substring( 1, str.length() - 1 ));
-        listener.receiveGranitMessage(newStr);
+        listener.receiveGranitMessage(newStr);*/
     }
 
     private final UsbSerialInterface.UsbReadCallback mCallback =
@@ -269,9 +271,11 @@ public class LocalService extends Service {
                 new Handler(Looper.getMainLooper()).post(new Runnable() {
                     @Override
                     public void run() {
-                        byte[] result = Utils.INSTANCE.parseData(data, context);
-                        if (result != null)
+                        GranitMessage result = Utils.INSTANCE.parseData(data, context);
+                        if (result != null) {
                             Toast.makeText(context, "Я понял данные!!!", Toast.LENGTH_SHORT).show();
+                            listener.receiveGranitMessage(result);
+                        }
 
       /*                  if (data[0] == start[0] && data[data.length-1] == end[0]) {
                             //пакет размером меньше чем 55 байт

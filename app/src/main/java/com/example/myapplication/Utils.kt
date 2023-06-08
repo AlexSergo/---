@@ -34,7 +34,7 @@ object Utils {
         return byteArrayOf(START.toShort().toByte()) + bytes + crc + byteArrayOf(END.toShort().toByte());
     }
 
-    fun parseData(data: ByteArray, context: Context): ByteArray? {
+    fun parseData(data: ByteArray, context: Context): GranitMessage? {
         val copy = data.copyOfRange(1, data.size - 1)
 
         val list = data.toMutableList()
@@ -44,7 +44,6 @@ object Utils {
             list.removeLast()
             if (list.first().toInt() and 0xFF == 0x10){
                 Log.d("GRANITTTT", "Пакет с данными!")
-                Toast.makeText(context, "crc ${list[list.size - 1]}  ${list[list.size - 2]}", Toast.LENGTH_SHORT).show()
                 // удаляем отправителя, получателя, батарею и идентификатор
                 for (i in 1..6)
                     list.removeFirst()
@@ -53,10 +52,8 @@ object Utils {
                 // удаляем crc
                 list.removeLast()
                 list.removeLast()
-
-                if (verifyCRCXModem(copy)) {
-                   Toast.makeText(context, "Данные остались целыми!", Toast.LENGTH_SHORT).show()
-                    return ManevrProtocol.parsePacket(list.toByteArray())
+                if (crc.contentEquals(byteArrayOf(copy[copy.size - 1], copy[copy.size - 2]))) {
+                    return ManevrProtocol.parsePacket(list.toByteArray(), context)
                 }
                 else {
                     Log.d("GRANITTTT", "Данные битые! crc = ${crc.decodeToString()}")
@@ -65,6 +62,7 @@ object Utils {
             }
             else if (list.first().toInt() and 0xFF == 0x21){
                 Log.d("GRANITTTT", "Успешно отправлено!")
+                Toast.makeText(context, "Успешно отправлено!", Toast.LENGTH_SHORT).show()
             }
         }
         return null

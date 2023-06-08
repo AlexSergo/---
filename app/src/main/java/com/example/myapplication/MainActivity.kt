@@ -2,8 +2,10 @@ package com.example.myapplication
 
 import android.app.ActivityManager
 import android.content.ComponentName
+import android.content.Context
 import android.content.Intent
 import android.content.ServiceConnection
+import android.content.SharedPreferences
 import android.os.Bundle
 import android.os.IBinder
 import android.view.View
@@ -12,6 +14,7 @@ import android.widget.EditText
 import android.widget.TextView
 import android.widget.Toast
 import androidx.appcompat.app.AppCompatActivity
+import androidx.core.widget.addTextChangedListener
 import com.example.myapplication.databinding.ActivityMainBinding
 import com.example.myapplication.mapper.MessageMapper.createRadioGranitMessage
 import com.example.myapplication.mapper.MessageMapper.mapMessageFromGranit
@@ -46,6 +49,7 @@ class MainActivity : AppCompatActivity(), ServiceCallback {
         sendTechnicButton = binding.buttonTechnic
         sendGapButton = binding.buttonGap
         id = binding.myId
+        id.text = Device.getDeviceId(applicationContext)
         destId = binding.subscriberId
         message = binding.message
         val technic = Technic(
@@ -90,6 +94,32 @@ class MainActivity : AppCompatActivity(), ServiceCallback {
                 destId.getText().toString(),
                 mapGapToText(gap, technic)
             )
+        }
+
+        val sharedPref: SharedPreferences = applicationContext.getSharedPreferences("PREFS", Context.MODE_PRIVATE)
+        val id = sharedPref.getString("ID", null)
+        val mes = sharedPref.getString("MES", null)
+        if (id != null)
+            destId.setText(id)
+        if (mes != null)
+            message.setText(mes)
+        message.addTextChangedListener {
+            sharedPref.let {
+                val editor: SharedPreferences.Editor = sharedPref.edit()
+
+                editor.putString("MES", message.text.toString())
+
+                editor.apply()
+            }
+        }
+        destId.addTextChangedListener {
+            sharedPref.let {
+                val editor: SharedPreferences.Editor = sharedPref.edit()
+
+                editor.putString("ID", destId.text.toString())
+
+                editor.apply()
+            }
         }
     }
 
@@ -146,18 +176,18 @@ class MainActivity : AppCompatActivity(), ServiceCallback {
     }
 
     override fun connected() {
-        Toast.makeText(this, "Подключено!", Toast.LENGTH_SHORT).show()
+      //  Toast.makeText(this, "Подключено!", Toast.LENGTH_SHORT).show()
     }
 
-    override fun receiveGranitMessage(message: String) {
-        mapMessageFromGranit(message, this)
+    override fun receiveGranitMessage(message: GranitMessage) {
+        binding.message.setText(message.data.decodeToString())
+        Toast.makeText(applicationContext, "сообщение от абонента с crc ${message.senderCRC}", Toast.LENGTH_SHORT).show()
     }
 
     override fun send(senderId: String, destId: String, data: String) {
-        val message = createRadioGranitMessage(senderId, destId, data)
         if (mService != null) {
             Toast.makeText(this, "Готов к отправке!", Toast.LENGTH_SHORT).show()
-            mService!!.sendWithWave(message)
+            mService!!.sendWithWave(data.toByteArray(), senderId, destId)
         }
     }
 
