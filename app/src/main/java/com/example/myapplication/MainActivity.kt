@@ -19,7 +19,6 @@ import com.example.myapplication.databinding.ActivityMainBinding
 import com.example.myapplication.mapper.MessageMapper.createRadioGranitMessage
 import com.example.myapplication.mapper.MessageMapper.mapMessageFromGranit
 import com.example.myapplication.mapper.TechnicMapperUI.mapGapToText
-import com.example.myapplication.mapper.TechnicMapperUI.mapTechnicToText
 import com.example.myapplication.mapper.TechnicTypes
 import com.example.myapplication.model.Coordinates
 import com.example.myapplication.model.Gap
@@ -71,19 +70,30 @@ class MainActivity : AppCompatActivity(), ServiceCallback {
             "Цель движется"
         )
         sendTextButton.setOnClickListener(View.OnClickListener {
-            if (destId.getText().toString() != "" && message.getText().toString() != "") send(
-                id.getText().toString(),
-                destId.getText().toString(),
-                message.getText().toString()
-            ) else showToast("Пустые поля!")
+            val split = binding.ip.text.toString().split(".")
+
+            if (destId.getText().toString() != "" && message.getText().toString() != "")
+                if (split.size != 4)
+                    send(
+                    id.getText().toString(),
+                    destId.getText().toString(),
+                    message.getText().toString()
+                    )
+                else
+                    send(
+                        split,
+                        destId.getText().toString(),
+                        message.getText().toString()
+                    )
+            else showToast("Пустые поля!")
             println(message.text.toString())
         })
         sendTechnicButton.setOnClickListener {
-            if (destId.getText().toString() != "") send(
+ /*           if (destId.getText().toString() != "") send(
                 id.getText().toString(),
                 destId.getText().toString(),
                 mapTechnicToText(technic)
-            )
+            )*/
         }
         sendGapButton.setOnClickListener {
             val gap = Gap(
@@ -102,17 +112,26 @@ class MainActivity : AppCompatActivity(), ServiceCallback {
             )
         }
         binding.checkbox.setOnClickListener {
-            if (binding.checkbox.isChecked)
-                sendTest(id.text.toString(), destId.text.toString(), "55.9876, 43.0912")
+            if (binding.checkbox.isChecked){
+                val split = binding.ip.text.toString().split(".")
+                val sender = if (split.size == 4)
+                    split[2] + "." + split[3]
+                else
+                    id.toString()
+                sendTest(sender, destId.text.toString(), "55.9876, 43.0912")
+            }
         }
+
 
         val sharedPref: SharedPreferences = applicationContext.getSharedPreferences("PREFS", Context.MODE_PRIVATE)
         val id = sharedPref.getString("ID", null)
         val mes = sharedPref.getString("MES", null)
+        val ip = sharedPref.getString("IP", "")
         if (id != null)
             destId.setText(id)
         if (mes != null)
             message.setText(mes)
+        binding.ip.setText(ip)
         message.addTextChangedListener {
             sharedPref.let {
                 val editor: SharedPreferences.Editor = sharedPref.edit()
@@ -127,6 +146,15 @@ class MainActivity : AppCompatActivity(), ServiceCallback {
                 val editor: SharedPreferences.Editor = sharedPref.edit()
 
                 editor.putString("ID", destId.text.toString())
+
+                editor.apply()
+            }
+        }
+        binding.ip.addTextChangedListener {
+            sharedPref.let {
+                val editor: SharedPreferences.Editor = sharedPref.edit()
+
+                editor.putString("IP", binding.ip.text.toString())
 
                 editor.apply()
             }
@@ -210,6 +238,13 @@ class MainActivity : AppCompatActivity(), ServiceCallback {
     }
 
     override fun send(senderId: String, destId: String, data: String) {
+        if (mService != null) {
+            Toast.makeText(this, "Готов к отправке!", Toast.LENGTH_SHORT).show()
+            mService!!.sendWithWave(data.toByteArray(), senderId, destId)
+        }
+    }
+
+    fun send(senderId: List<String>, destId: String, data: String) {
         if (mService != null) {
             Toast.makeText(this, "Готов к отправке!", Toast.LENGTH_SHORT).show()
             mService!!.sendWithWave(data.toByteArray(), senderId, destId)

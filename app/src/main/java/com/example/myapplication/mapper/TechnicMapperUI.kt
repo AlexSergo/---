@@ -86,8 +86,9 @@ object TechnicMapperUI {
         return Pair(gap, Coordinates(latTechnic, lonTechnic))
     }
 
-    fun mapTechnicToText(technic: Technic): String {
-        val builder = StringBuilder()
+    fun mapTechnicToBytes(technic: Technic): ByteArray {
+
+/*        val builder = StringBuilder()
         builder.append("Данные по цели: ${technic.name}\n")
         builder.append("Координаты:\n")
         builder.append("X = " + technic.coordinates.x.toString() + "\n")
@@ -103,7 +104,8 @@ object TechnicMapperUI {
             builder.append("Укрытая\n")
         if (technic.isDestroyed)
             builder.append("Уничтожена")
-        return builder.toString()
+        return builder.toString()*/
+        return byteArrayOf()
     }
 
     fun mapGapToText(gap: Gap, technic: Technic): String {

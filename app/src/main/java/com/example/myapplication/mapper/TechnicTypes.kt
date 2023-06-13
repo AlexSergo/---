@@ -20,4 +20,8 @@ enum class TechnicTypes {
     KLN_BR,
     TANK,
     GAP,
+    BMD,
+    ANOTHER,
+    MORTAR,
+    TANK_UNION
 }

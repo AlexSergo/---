@@ -40,6 +40,31 @@ object ManevrProtocol {
         return divideArray(fullMessage)
     }
 
+    fun getListData(data: ByteArray, senderId: List<String>, destId: String, context: Context): List<ByteArray>{
+        val options = 0x0
+        val port = byteArrayOf(0x0, 0x1)
+        val senderCRC = byteArrayOf(senderId[0].toInt().toByte(), senderId[1].toInt().toByte())
+        val destCRC = Utils.getCRCXModem(destId.toByteArray())
+
+        val crc16 = Utils.getCRCXModem(data)
+        val size = data.size
+        val fullMessage = byteArrayOf(
+            options.toByte(),
+            senderCRC[0], senderCRC[1],
+            destCRC[0], destCRC[1],
+            0x0, 0x0,
+            port[0], port[1],
+            crc16[0], crc16[1],
+            size.shr(8).toByte(), (size and 0xFF).toShort().toByte()) + data
+
+        println("my data ${data.contentToString()}")
+        if (idPackage != 15)
+            idPackage++
+        else
+            idPackage = 0
+        return divideArray(fullMessage)
+    }
+
     private fun divideArray(fullMessage: ByteArray): List<ByteArray> {
         val subArrays = mutableListOf<ByteArray>()
         var i = 0

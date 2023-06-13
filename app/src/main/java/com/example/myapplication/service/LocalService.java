@@ -245,6 +245,27 @@ public class LocalService extends Service {
             listener.showToast("Гранит не подключен!");
     }
 
+    public void sendWithWave(byte[] bytes, List<String> senderId, String destId) throws InterruptedException {
+        if (serial != null) {
+            List<byte[]> list = ManevrProtocol.INSTANCE.getListData(bytes, senderId, destId, context);
+            for (int i = 0; i < list.size(); i++) {
+                byte[] sample = Utils.INSTANCE.addIdentificators(RAW_DATA, FROM, TO, BAT, list.get(i));
+                byte[] crc = Utils.INSTANCE.getCRCXModem(sample);
+                byte[] withCRC = Utils.INSTANCE.addCRCXModem(sample);
+                byte[] afterStuff = Utils.INSTANCE.stuffBytes(withCRC);
+                byte[] result = Utils.INSTANCE.getResult(START, afterStuff, END);
+
+                Utils.INSTANCE.zz(afterStuff);
+                System.out.println("result " +  result.length);
+
+                serial.write(result);
+                Thread.sleep(50);
+            }
+        }
+        else
+            listener.showToast("Гранит не подключен!");
+    }
+
 
     public void addBuffer(byte[] data) {
         allByteArray = new byte[combine.length + data.length];
@@ -277,30 +298,6 @@ public class LocalService extends Service {
                         if (result != null) {
                             listener.receiveGranitMessage(result);
                         }
-
-      /*                  if (data[0] == start[0] && data[data.length-1] == end[0]) {
-                            //пакет размером меньше чем 55 байт
-                            // затем очистить буфер
-                            addBuffer(data);
-                            receiveMessage(combine);
-                            combine = new byte[0];
-                        }
-                        if (data[0] == start[0] && data[data.length-1] != end[0]) {
-                            //пришел пакет больше чем 55 байт добавить в буффер
-                            addBuffer(data);
-                        }
-                        if (data[0] != start[0] && data[data.length-1] != end[0]) {
-                            //пакет который не содержит в себе стартового разделителя и конечного
-                            addBuffer(data);
-                        }
-                        if (data[0] != start[0] && data[data.length-1] == end[0]) {
-                            // самый последний пакет, добавить в буфер сообщить о готовности отправить строку в activity
-                            // затем очистить буфер
-                            addBuffer(data);
-                            receiveMessage(combine);
-                            combine = new byte[0];
-                        }*/
-
                     }
                 });
 
