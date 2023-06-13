@@ -33,6 +33,15 @@
         app:layout_constraintStart_toStartOf="parent"
         app:layout_constraintTop_toBottomOf="@id/buttonTechnic"/>
 
+    <CheckBox
+        android:id="@+id/checkbox"
+        android:layout_width="match_parent"
+        android:layout_height="wrap_content"
+        app:layout_constraintStart_toStartOf="parent"
+        app:layout_constraintTop_toBottomOf="@id/buttonGap"
+        android:layout_marginStart="16dp"
+        android:text="тестовый пинг"/>
+
     <TextView
         android:id="@+id/textView"
         android:layout_width="wrap_content"

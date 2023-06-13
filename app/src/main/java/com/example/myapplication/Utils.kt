@@ -53,7 +53,25 @@ object Utils {
                 list.removeLast()
                 list.removeLast()
                 if (crc.contentEquals(byteArrayOf(copy[copy.size - 1], copy[copy.size - 2]))) {
-                    return ManevrProtocol.parsePacket(list.toByteArray(), context)
+                    val body = ManevrProtocol.parsePacket(list.toByteArray(), context)
+                    body?.data?.let {data ->
+                        val list = data.toMutableList()
+                        for (i in 0 until list.size - 1){
+                            if ((list[i].toInt() and 0xFF) == 0x7D){
+                                if ((list[i + 1].toInt() and 0xFF) == 0x5D)
+                                    list.removeAt(i + 1)
+                                else if ((list[i + 1].toInt() and 0xFF) == 0xF1) {
+                                    list[i] = 0xD1.toShort().toByte()
+                                    list.removeAt(i + 1)
+                                }
+                                else if ((list[i + 1].toInt() and 0xFF) == 0xF0){
+                                    list[i] = 0xD0.toShort().toByte()
+                                    list.removeAt(i + 1)
+                                }
+                            }
+                        }
+                        return GranitMessage(body.senderCRC, list.toByteArray())
+                    }
                 }
                 else {
                     Log.d("GRANITTTT", "Данные битые! crc = ${crc.decodeToString()}")

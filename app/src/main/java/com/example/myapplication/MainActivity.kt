@@ -26,6 +26,11 @@ import com.example.myapplication.model.Gap
 import com.example.myapplication.model.Technic
 import com.example.myapplication.service.LocalService
 import com.example.myapplication.service.ServiceCallback
+import kotlinx.coroutines.GlobalScope
+import kotlinx.coroutines.delay
+import kotlinx.coroutines.launch
+import java.util.Calendar
+import java.util.Date
 
 
 class MainActivity : AppCompatActivity(), ServiceCallback {
@@ -95,6 +100,10 @@ class MainActivity : AppCompatActivity(), ServiceCallback {
                 destId.getText().toString(),
                 mapGapToText(gap, technic)
             )
+        }
+        binding.checkbox.setOnClickListener {
+            if (binding.checkbox.isChecked)
+                sendTest(id.text.toString(), destId.text.toString(), "55.9876, 43.0912")
         }
 
         val sharedPref: SharedPreferences = applicationContext.getSharedPreferences("PREFS", Context.MODE_PRIVATE)
@@ -181,14 +190,46 @@ class MainActivity : AppCompatActivity(), ServiceCallback {
     }
 
     override fun receiveGranitMessage(message: GranitMessage) {
-        binding.message.setText(message.data.decodeToString())
-        Toast.makeText(applicationContext, "сообщение от абонента с crc ${message.senderCRC.contentToString()}", Toast.LENGTH_SHORT).show()
+        if (message.data[0].toInt() and 0xFF == 0x55 && message.data[1].toInt() and 0xFF == 0xAA) {
+            Toast.makeText(
+                applicationContext,
+                "Принято широковещательное сообщение!",
+                Toast.LENGTH_SHORT
+            ).show()
+            binding.message.setText(message.data.copyOfRange(2, message.data.size).decodeToString())
+        }
+        else {
+            Toast.makeText(
+                applicationContext,
+                "Принято личное сообщение!",
+                Toast.LENGTH_SHORT
+            ).show()
+            binding.message.setText(message.data.decodeToString())
+        }
+
     }
 
     override fun send(senderId: String, destId: String, data: String) {
         if (mService != null) {
             Toast.makeText(this, "Готов к отправке!", Toast.LENGTH_SHORT).show()
             mService!!.sendWithWave(data.toByteArray(), senderId, destId)
+        }
+    }
+
+    override fun sendTest(senderId: String, destId: String, data: String) {
+        GlobalScope.launch {
+            while (binding.checkbox.isChecked) {
+                if (mService != null) {
+                    val date = Calendar.getInstance().time.toString()
+                    mService!!.sendWithWave(byteArrayOf(0x55, 0xAA.toShort().toByte()) +
+                            senderId.toByteArray() +
+                            ",".toByteArray() +
+                            date.toByteArray() +
+                            ",".toByteArray() +
+                            data.toByteArray(), senderId, "-")
+                }
+                delay(30000)
+            }
         }
     }
 

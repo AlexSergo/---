@@ -36,6 +36,8 @@ import com.example.myapplication.Utils;
 import com.felhr.usbserial.UsbSerialDevice;
 import com.felhr.usbserial.UsbSerialInterface;
 
+import org.jetbrains.annotations.NotNull;
+
 import java.nio.ByteBuffer;
 import java.nio.charset.Charset;
 import java.util.Arrays;
@@ -243,6 +245,7 @@ public class LocalService extends Service {
             listener.showToast("Гранит не подключен!");
     }
 
+
     public void addBuffer(byte[] data) {
         allByteArray = new byte[combine.length + data.length];
         buff = ByteBuffer.wrap(allByteArray);
@@ -272,7 +275,6 @@ public class LocalService extends Service {
                     public void run() {
                         GranitMessage result = Utils.INSTANCE.parseData(data, context);
                         if (result != null) {
-                            Toast.makeText(context, "Я понял данные!!!", Toast.LENGTH_SHORT).show();
                             listener.receiveGranitMessage(result);
                         }
 

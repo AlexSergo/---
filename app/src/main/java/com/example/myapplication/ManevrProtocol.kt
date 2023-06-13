@@ -13,6 +13,7 @@ object ManevrProtocol {
 
     private var myAddressCRC: ByteArray? = null
     private var mapOfSenders = hashMapOf<String, MutableMap<Int, ByteArray>>()
+    private var  idPackage = -1
 
     fun getListData(data: ByteArray, senderId: String, destId: String, context: Context): List<ByteArray>{
         val options = 0x0
@@ -26,13 +27,16 @@ object ManevrProtocol {
             options.toByte(),
             senderCRC[0], senderCRC[1],
             destCRC[0], destCRC[1],
+            0x0, 0x0,
             port[0], port[1],
             crc16[0], crc16[1],
             size.shr(8).toByte(), (size and 0xFF).toShort().toByte()) + data
 
-        Toast.makeText(context, "crc ${crc16.contentToString()}", Toast.LENGTH_SHORT).show()
         println("my data ${data.contentToString()}")
-
+        if (idPackage != 15)
+            idPackage++
+        else
+            idPackage = 0
         return divideArray(fullMessage)
     }
 
@@ -66,7 +70,7 @@ object ManevrProtocol {
         val magicBytes = byteArrayOf(0x04, 0x96.toShort().toByte(), 0x43)
         if (myAddressCRC == null)
             myAddressCRC = Utils.getCRCXModem(Device.id.toByteArray())
-        val port = byteArrayOf(0x0, 0x1)
+        val port = byteArrayOf((idPackage shl 4).toShort().toByte(), 0x0)
 
         val bit0 = (chunkNumber shr 0) and 1
         val bit1 = (chunkNumber shr 1) and 1
@@ -139,7 +143,7 @@ object ManevrProtocol {
 
     private fun cleanMessage(packages: MutableMap<Int, ByteArray>, id: ByteArray, context: Context): GranitMessage? {
         val sortedPackages = packages.toSortedMap()
-        val HEADER_SIZE = 11
+        val HEADER_SIZE = 13
         if (sortedPackages.isEmpty()) {
             Toast.makeText(context, "Нет данных!", Toast.LENGTH_SHORT).show()
             return null
@@ -153,12 +157,13 @@ object ManevrProtocol {
 
         if (myAddressCRC == null)
             myAddressCRC = Utils.getCRCXModem(Device.id.toByteArray())
-        if (myAddressCRC!![0] !=header[3]|| myAddressCRC!![1] != header[4]){
-            Toast.makeText(context, "сообщение не для меня! ${myAddressCRC.contentToString()} ${header.contentToString()}", Toast.LENGTH_SHORT).show()
-            return null
-        }
-        val size = ((header[9].toInt() shl 8) or (header[10].toInt() and 0xFF))
-        println("--- ${header[9]} ${header[10].toInt() and 0xFF}")
+        if ((!byteArrayOf(header[3], header[4]).contentEquals(Utils.getCRCXModem("-".toByteArray()))))
+            if (myAddressCRC!![0] !=header[3]|| myAddressCRC!![1] != header[4]){
+                Toast.makeText(context, "сообщение не для меня! ${myAddressCRC.contentToString()} ${header.contentToString()}", Toast.LENGTH_SHORT).show()
+                return null
+            }
+        val size = ((header[HEADER_SIZE - 2].toInt() shl 8) or (header[HEADER_SIZE - 1].toInt() and 0xFF))
+        println("--- ${header[HEADER_SIZE - 2]} ${header[HEADER_SIZE - 1].toInt() and 0xFF}")
         // получаем все тело
         val fullData = mutableListOf<Byte>()
         for ((key, value) in packages){
@@ -166,7 +171,7 @@ object ManevrProtocol {
         }
         val body = removeTrailingZeros(fullData.subList(HEADER_SIZE, fullData.size).toByteArray(), size)
         val bodyCRC = Utils.getCRCXModem(body)
-        val crc = byteArrayOf(header[7], header[8])
+        val crc = byteArrayOf(header[HEADER_SIZE - 4], header[HEADER_SIZE - 3])
         println("body ${body.contentToString()}")
 
         // проверка контрольной суммы тела
