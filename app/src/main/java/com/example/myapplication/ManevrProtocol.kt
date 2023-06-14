@@ -13,6 +13,7 @@ object ManevrProtocol {
 
     private var myAddressCRC: ByteArray? = null
     private var mapOfSenders = hashMapOf<String, MutableMap<Int, ByteArray>>()
+    private var myIpBytes = mutableListOf<Byte>()
     private var  idPackage = -1
 
     fun getListData(data: ByteArray, senderId: String, destId: String, context: Context): List<ByteArray>{
@@ -40,19 +41,22 @@ object ManevrProtocol {
         return divideArray(fullMessage)
     }
 
-    fun getListData(data: ByteArray, senderId: List<String>, destId: String, context: Context): List<ByteArray>{
+    fun getListData(data: ByteArray, senderId: List<String>, destId: List<String>, context: Context): List<ByteArray>{
         val options = 0x0
         val port = byteArrayOf(0x0, 0x1)
         val senderCRC = byteArrayOf(senderId[0].toInt().toByte(), senderId[1].toInt().toByte())
-        val destCRC = Utils.getCRCXModem(destId.toByteArray())
-
+        myIpBytes.clear()
+        myIpBytes.add(senderId[0].toInt().toByte())
+        myIpBytes.add(senderId[1].toInt().toByte())
+        myIpBytes.add(senderId[2].toInt().toByte())
+        myIpBytes.add(senderId[3].toInt().toByte())
         val crc16 = Utils.getCRCXModem(data)
         val size = data.size
         val fullMessage = byteArrayOf(
             options.toByte(),
             senderCRC[0], senderCRC[1],
-            destCRC[0], destCRC[1],
-            0x0, 0x0,
+            destId[0].toInt().toByte(),destId[1].toInt().toByte(),
+            destId[2].toInt().toByte(), destId[3].toInt().toByte(),
             port[0], port[1],
             crc16[0], crc16[1],
             size.shr(8).toByte(), (size and 0xFF).toShort().toByte()) + data
@@ -93,8 +97,8 @@ object ManevrProtocol {
 
     private fun getHead(chunkNumber: Int, countOfChunks: Int): ByteArray {
         val magicBytes = byteArrayOf(0x04, 0x96.toShort().toByte(), 0x43)
-        if (myAddressCRC == null)
-            myAddressCRC = Utils.getCRCXModem(Device.id.toByteArray())
+        if (myIpBytes.isEmpty())
+            myIpBytes = Device.ip
         val port = byteArrayOf((idPackage shl 4).toShort().toByte(), 0x0)
 
         val bit0 = (chunkNumber shr 0) and 1
@@ -110,7 +114,7 @@ object ManevrProtocol {
 
         val key = ((chunkNumber shl 4) + (countOfChunks - 1)).toShort().toByte()
 
-        return magicBytes + myAddressCRC!! + port + byteArrayOf(key)
+        return magicBytes + byteArrayOf(myIpBytes[2], myIpBytes[3]) + port + byteArrayOf(key)
     }
 
     fun parsePacket(packet: ByteArray, context: Context): GranitMessage? {
@@ -180,11 +184,10 @@ object ManevrProtocol {
         }
         val destCRC = (byteArrayOf(header[3], header[4]))
 
-        if (myAddressCRC == null)
-            myAddressCRC = Utils.getCRCXModem(Device.id.toByteArray())
-        if ((!byteArrayOf(header[3], header[4]).contentEquals(Utils.getCRCXModem("-".toByteArray()))))
-            if (myAddressCRC!![0] !=header[3]|| myAddressCRC!![1] != header[4]){
-                Toast.makeText(context, "сообщение не для меня! ${myAddressCRC.contentToString()} ${header.contentToString()}", Toast.LENGTH_SHORT).show()
+        myIpBytes = Device.ip
+        if (!(header[3].toInt() == 0 && header[4].toInt() == 0 && header[5].toInt() == 0 && header[6].toInt() == 0))
+            if (myIpBytes[0] !=header[3] || myIpBytes[1] != header[4] || myIpBytes[2] !=header[5]|| myIpBytes[3] != header[6]){
+                Toast.makeText(context, "сообщение не для меня!", Toast.LENGTH_SHORT).show()
                 return null
             }
         val size = ((header[HEADER_SIZE - 2].toInt() shl 8) or (header[HEADER_SIZE - 1].toInt() and 0xFF))
@@ -195,6 +198,10 @@ object ManevrProtocol {
             fullData.addAll(value.toList())
         }
         val body = removeTrailingZeros(fullData.subList(HEADER_SIZE, fullData.size).toByteArray(), size)
+        if (body == null) {
+            Toast.makeText(context, "Сообщение битое!", Toast.LENGTH_SHORT).show()
+            return null
+        }
         val bodyCRC = Utils.getCRCXModem(body)
         val crc = byteArrayOf(header[HEADER_SIZE - 4], header[HEADER_SIZE - 3])
         println("body ${body.contentToString()}")
@@ -208,13 +215,16 @@ object ManevrProtocol {
         return GranitMessage(senderCRC = byteArrayOf(header[1], header[2]), data = body)
     }
 
-    private fun removeTrailingZeros(input: ByteArray, size: Int): ByteArray {
+    private fun removeTrailingZeros(input: ByteArray, size: Int): ByteArray? {
         var endIndex = input.size - 1
         while (endIndex >= size) {
             endIndex--
         }
         println("size $size, endIn $endIndex, input.size ${input.size}")
-        val withoutZeroes = input.copyOfRange(0, endIndex + 1).toMutableList()
-        return withoutZeroes.toByteArray()
+        try {
+            val withoutZeroes = input.copyOfRange(0, endIndex + 1).toMutableList()
+            return withoutZeroes.toByteArray()
+        }catch (_: IllegalArgumentException){}
+        return null
     }
 }

@@ -3,6 +3,7 @@ package com.example.myapplication.mapper
 import com.example.myapplication.model.Coordinates
 import com.example.myapplication.model.Gap
 import com.example.myapplication.model.Technic
+import java.nio.charset.Charset
 
 object TechnicMapperUI {
 
@@ -87,25 +88,17 @@ object TechnicMapperUI {
     }
 
     fun mapTechnicToBytes(technic: Technic): ByteArray {
+        val type = TechnicTypesBytes[technic.technicType]!!
+        val name = technic.name.toByteArray(Charset.forName("ISO-8859-5"))
+        val allies = if (technic.isAllies) 1 else 0
+        val destroyed = if (technic.isDestroyed) 1 else 0
+        val covered = if (technic.isCovered) 1 else 0
+        val sum = (allies shl 2) or (destroyed shl 1) or (covered shl 0)
+        val lat = (technic.coordinates.x.toString() + " ").toByteArray()
+        val lon = (technic.coordinates.y.toString() + " ").toByteArray()
+        val h = technic.coordinates.h.toString().toByteArray()
 
-/*        val builder = StringBuilder()
-        builder.append("Данные по цели: ${technic.name}\n")
-        builder.append("Координаты:\n")
-        builder.append("X = " + technic.coordinates.x.toString() + "\n")
-        builder.append("Y = " + technic.coordinates.y.toString() + "\n")
-        builder.append("Высота: " + technic.coordinates.h.toInt().toString() + "\n")
-        builder.append("Тип техники: " + TechnicTypesRu[technic.technicType] + "\n")
-        builder.append("Подразделение: " + technic.division + "\n")
-        if (!technic.isAllies)
-            builder.append("Враг\n")
-        else
-            builder.append("Союзник\n")
-        if (technic.isCovered)
-            builder.append("Укрытая\n")
-        if (technic.isDestroyed)
-            builder.append("Уничтожена")
-        return builder.toString()*/
-        return byteArrayOf()
+        return type + name + byteArrayOf(sum.toByte()) + lat + lon + h
     }
 
     fun mapGapToText(gap: Gap, technic: Technic): String {

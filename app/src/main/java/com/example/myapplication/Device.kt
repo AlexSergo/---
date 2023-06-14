@@ -5,6 +5,7 @@ import android.content.Context
 import android.provider.Settings
 
 object Device {
+    var ip = mutableListOf<Byte>()
     private var _id: String = ""
     val id: String get() = _id
 

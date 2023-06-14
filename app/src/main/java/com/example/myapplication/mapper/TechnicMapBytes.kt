@@ -14,18 +14,18 @@ var TechnicTypesBytes = mapOf(
     TechnicTypes.O_POINT to intToBytes(1005),
     TechnicTypes.KNP to intToBytes(1006),
     TechnicTypes.TANKS to  intToBytes(6194),
-    TechnicTypes.BTR to "БТР",
+    TechnicTypes.BTR to intToBytes(3114),
     TechnicTypes.BMP to intToBytes(3213),
-    TechnicTypes.HELICOPTER to "ВЕРТ",
+    TechnicTypes.HELICOPTER to intToBytes(1007),
     TechnicTypes.PTRK to intToBytes(3110),
-    TechnicTypes.KLN_PESH to "КЛН ПЕШ",
-    TechnicTypes.KLN_BR to "КЛН БР",
+    TechnicTypes.KLN_PESH to intToBytes(1008),
+    TechnicTypes.KLN_BR to intToBytes(1009),
     TechnicTypes.TANK to intToBytes(3112),
-    TechnicTypes.GAP to "Разрыв",
-    TechnicTypes.ANOTHER to "ДРУГАЯ",
-    TechnicTypes.MORTAR to "МИНОМЁТ",
-    TechnicTypes.TANK_UNION to "ТАНК",
-    TechnicTypes.BMD to "БМД"
+    TechnicTypes.GAP to intToBytes(1010),
+    TechnicTypes.ANOTHER to intToBytes(1011),
+    TechnicTypes.MORTAR to intToBytes(1012),
+    TechnicTypes.TANK_UNION to intToBytes(1013),
+    TechnicTypes.BMD to intToBytes(1014),
 )
 
 fun intToBytes(i: Int): ByteArray =

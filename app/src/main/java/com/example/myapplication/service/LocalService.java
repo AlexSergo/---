@@ -245,7 +245,7 @@ public class LocalService extends Service {
             listener.showToast("Гранит не подключен!");
     }
 
-    public void sendWithWave(byte[] bytes, List<String> senderId, String destId) throws InterruptedException {
+    public void sendWithWave(byte[] bytes, List<String> senderId, List<String> destId) throws InterruptedException {
         if (serial != null) {
             List<byte[]> list = ManevrProtocol.INSTANCE.getListData(bytes, senderId, destId, context);
             for (int i = 0; i < list.size(); i++) {

@@ -28,6 +28,7 @@ import com.example.myapplication.service.ServiceCallback
 import kotlinx.coroutines.GlobalScope
 import kotlinx.coroutines.delay
 import kotlinx.coroutines.launch
+import java.lang.Exception
 import java.util.Calendar
 import java.util.Date
 
@@ -71,21 +72,16 @@ class MainActivity : AppCompatActivity(), ServiceCallback {
         )
         sendTextButton.setOnClickListener(View.OnClickListener {
             val split = binding.ip.text.toString().split(".")
+            val destSplit = binding.destIp.text.toString().split(".")
+            Device.ip = mutableListOf(split[0].toInt().toByte(), split[1].toInt().toByte(),
+                split[2].toInt().toByte(), split[3].toInt().toByte())
 
-            if (destId.getText().toString() != "" && message.getText().toString() != "")
-                if (split.size != 4)
-                    send(
-                    id.getText().toString(),
-                    destId.getText().toString(),
-                    message.getText().toString()
-                    )
-                else
+            if (message.getText().toString() != "")
                     send(
                         split,
-                        destId.getText().toString(),
+                        destSplit,
                         message.getText().toString()
                     )
-            else showToast("Пустые поля!")
             println(message.text.toString())
         })
         sendTechnicButton.setOnClickListener {
@@ -114,11 +110,8 @@ class MainActivity : AppCompatActivity(), ServiceCallback {
         binding.checkbox.setOnClickListener {
             if (binding.checkbox.isChecked){
                 val split = binding.ip.text.toString().split(".")
-                val sender = if (split.size == 4)
-                    split[2] + "." + split[3]
-                else
-                    id.toString()
-                sendTest(sender, destId.text.toString(), "55.9876, 43.0912")
+                val destSplit = binding.destIp.text.toString().split(".")
+                sendTest(split, destSplit, "55.9876, 43.0912")
             }
         }
 
@@ -127,11 +120,13 @@ class MainActivity : AppCompatActivity(), ServiceCallback {
         val id = sharedPref.getString("ID", null)
         val mes = sharedPref.getString("MES", null)
         val ip = sharedPref.getString("IP", "")
+        val destIP = sharedPref.getString("destIP", "")
         if (id != null)
             destId.setText(id)
         if (mes != null)
             message.setText(mes)
         binding.ip.setText(ip)
+        binding.destIp.setText(destIP)
         message.addTextChangedListener {
             sharedPref.let {
                 val editor: SharedPreferences.Editor = sharedPref.edit()
@@ -158,7 +153,26 @@ class MainActivity : AppCompatActivity(), ServiceCallback {
 
                 editor.apply()
             }
+            try {
+                val split = binding.ip.text.toString().split(".")
+                if (split.size == 4)
+                    Device.ip = mutableListOf(
+                        split[0].toInt().toByte(), split[1].toInt().toByte(),
+                        split[2].toInt().toByte(), split[3].toInt().toByte()
+                    )
+            }catch (_: Exception){}
         }
+        binding.destIp.addTextChangedListener {
+            sharedPref.let {
+                val editor: SharedPreferences.Editor = sharedPref.edit()
+                editor.putString("destIP", binding.destIp.text.toString())
+                editor.apply()
+            }
+        }
+        val split = binding.ip.text.toString().split(".")
+        if (split.size == 4)
+            Device.ip = mutableListOf(split[0].toInt().toByte(), split[1].toInt().toByte(),
+                split[2].toInt().toByte(), split[3].toInt().toByte())
     }
 
     override fun onStart() {
@@ -244,26 +258,26 @@ class MainActivity : AppCompatActivity(), ServiceCallback {
         }
     }
 
-    fun send(senderId: List<String>, destId: String, data: String) {
+    fun send(senderId: List<String>, destId: List<String>, data: String) {
         if (mService != null) {
             Toast.makeText(this, "Готов к отправке!", Toast.LENGTH_SHORT).show()
             mService!!.sendWithWave(data.toByteArray(), senderId, destId)
         }
     }
 
-    override fun sendTest(senderId: String, destId: String, data: String) {
+    override fun sendTest(senderId: List<String>, destId: List<String>, data: String) {
         GlobalScope.launch {
             while (binding.checkbox.isChecked) {
                 if (mService != null) {
                     val date = Calendar.getInstance().time.toString()
                     mService!!.sendWithWave(byteArrayOf(0x55, 0xAA.toShort().toByte()) +
-                            senderId.toByteArray() +
+                            (senderId[2] + "." + senderId[3]).toByteArray() +
                             ",".toByteArray() +
                             date.toByteArray() +
                             ",".toByteArray() +
-                            data.toByteArray(), senderId, "-")
+                            data.toByteArray(), senderId, "0.0.0.0".split("."))
                 }
-                delay(30000)
+                delay(10000)
             }
         }
     }
